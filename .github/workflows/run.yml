@@ -25,4 +25,5 @@ jobs:
           DOMAINS: ${{ secrets.DOMAINS }}
           SECRETID: ${{ secrets.SECRETID }}
           SECRETKEY: ${{ secrets.SECRETKEY }}
+          QMSG: ${{ secrets.QMSG }}
         run: python cf2dns_actions.py
