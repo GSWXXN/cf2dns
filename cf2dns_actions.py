@@ -31,7 +31,7 @@ DNS_SERVER = 1
 #解析生效时间，默认为600秒 如果不是DNS付费版用户 不要修改!!!
 TTL = 600
 
-isSuccess = true
+isSuccess = True
 ip = []
 
 urllib3.disable_warnings()
