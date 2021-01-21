@@ -175,7 +175,11 @@ def send():
     qData = ""
     if isSuccess:
         for i in ip:
-            qData += " & " + i
+            if ip.index(i) == 0:
+                qData += i
+            else:
+                qData += " & " + i
+        qData = "CDN IP 换成" + qData + "啦@4"
     else:
         qData = "自动换加速IP出错啦@5，快去检查"
     qData = "{\"msg\": \"" + qData + "\"}"
