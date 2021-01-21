@@ -179,9 +179,9 @@ def send():
                 qData += i
             else:
                 qData += " & " + i
-        qData = "CDN IP 换成" + qData + "啦@4"
+        qData = "CDN IP 换成" + qData + "啦@face=4@"
     else:
-        qData = "自动换加速IP出错啦@5，快去检查"
+        qData = "自动换加速IP出错啦@face=5@，快去检查"
     qData = "{\"msg\": \"" + qData + "\"}"
     qData = json.loads(qData)
     requests.post('https://qmsg.zendee.cn/send/' + QMSG, data = qData)
