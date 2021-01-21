@@ -11,6 +11,7 @@ import json
 import urllib.parse
 import urllib3
 import os
+import requests
 from dns.qCloud import QcloudApi
 from dns.aliyun import AliApi
 
@@ -22,12 +23,16 @@ DOMAINS = json.loads(os.environ["DOMAINS"])  #{"hostmonit.com": {"@": ["CM","CU"
 #腾讯云后台获取 https://console.cloud.tencent.com/cam/capi
 SECRETID = os.environ["SECRETID"]    #'AKIDV**********Hfo8CzfjgN'
 SECRETKEY = os.environ["SECRETKEY"]   #'ZrVs*************gqjOp1zVl'
+QKEY = os.environ["QKEY"]
 #默认为普通版本 不用修改
 AFFECT_NUM = 2
 #DNS服务商 如果使用DNSPod改为1 如果使用阿里云解析改成2
 DNS_SERVER = 1
 #解析生效时间，默认为600秒 如果不是DNS付费版用户 不要修改!!!
 TTL = 600
+
+isSuccess = true
+ip = []
 
 urllib3.disable_warnings()
 
@@ -53,6 +58,7 @@ def changeDNS(line, s_info, c_info, domain, sub_domain, cloud):
         line = "电信"
     else:
         print("CHANGE DNS ERROR: ----Time: " + str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())) + "----MESSAGE: LINE ERROR")
+        isSuccess = false
         return
     try:
         create_num = AFFECT_NUM - len(s_info)
@@ -66,8 +72,10 @@ def changeDNS(line, s_info, c_info, domain, sub_domain, cloud):
                 ret = cloud.change_record(domain, info["recordId"], sub_domain, cf_ip, "A", line, TTL)
                 if(DNS_SERVER != 1 or ret["code"] == 0):
                     print("CHANGE DNS SUCCESS: ----Time: " + str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())) + "----DOMAIN: " + domain + "----SUBDOMAIN: " + sub_domain + "----RECORDLINE: "+line+"----RECORDID: " + str(info["recordId"]) + "----VALUE: " + cf_ip )
+                    ip.append(cf_ip)
                 else:
                     print("CHANGE DNS ERROR: ----Time: " + str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())) + "----DOMAIN: " + domain + "----SUBDOMAIN: " + sub_domain + "----RECORDLINE: "+line+"----RECORDID: " + str(info["recordId"]) + "----VALUE: " + cf_ip + "----MESSAGE: " + ret["message"] )
+                    isSuccess = false
         elif create_num > 0:
             for i in range(create_num):
                 if len(c_info) == 0:
@@ -78,8 +86,10 @@ def changeDNS(line, s_info, c_info, domain, sub_domain, cloud):
                 ret = cloud.create_record(domain, sub_domain, cf_ip, "A", line, TTL)
                 if(DNS_SERVER != 1 or ret["code"] == 0):
                     print("CREATE DNS SUCCESS: ----Time: " + str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())) + "----DOMAIN: " + domain + "----SUBDOMAIN: " + sub_domain + "----RECORDLINE: "+line+"----VALUE: " + cf_ip )
+                    ip.append(cf_ip)
                 else:
                     print("CREATE DNS ERROR: ----Time: " + str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())) + "----DOMAIN: " + domain + "----SUBDOMAIN: " + sub_domain + "----RECORDLINE: "+line+"----RECORDID: " + str(info["recordId"]) + "----VALUE: " + cf_ip + "----MESSAGE: " + ret["message"] )
+                    isSuccess = false
         else:
             for info in s_info:
                 if create_num == 0 or len(c_info) == 0:
@@ -91,11 +101,14 @@ def changeDNS(line, s_info, c_info, domain, sub_domain, cloud):
                 ret = cloud.change_record(domain, info["recordId"], sub_domain, cf_ip, "A", line, TTL)
                 if(DNS_SERVER != 1 or ret["code"] == 0):
                     print("CHANGE DNS SUCCESS: ----Time: " + str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())) + "----DOMAIN: " + domain + "----SUBDOMAIN: " + sub_domain + "----RECORDLINE: "+line+"----RECORDID: " + str(info["recordId"]) + "----VALUE: " + cf_ip )
+                    ip.append(cf_ip)
                 else:
                     print("CHANGE DNS ERROR: ----Time: " + str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())) + "----DOMAIN: " + domain + "----SUBDOMAIN: " + sub_domain + "----RECORDLINE: "+line+"----RECORDID: " + str(info["recordId"]) + "----VALUE: " + cf_ip + "----MESSAGE: " + ret["message"] )
+                    isSuccess = false
                 create_num += 1
     except Exception as e:
             log_cf2dns.logger.error("CHANGE DNS ERROR: ----Time: " + str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())) + "----MESSAGE: " + str(e))
+            isSuccess = false
 
 def main(cloud):
     global AFFECT_NUM
@@ -104,6 +117,7 @@ def main(cloud):
             cfips = get_optimization_ip()
             if cfips == None or cfips["code"] != 200:
                 print("GET CLOUDFLARE IP ERROR: ----Time: " + str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())) + "----MESSAGE: " + str(cfips["info"]))
+                isSuccess = false
                 return
             cf_cmips = cfips["info"]["CM"]
             cf_cuips = cfips["info"]["CU"]
@@ -123,6 +137,7 @@ def main(cloud):
                                         print("DELETE DNS SUCCESS: ----Time: "  + str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())) + "----DOMAIN: " + domain + "----SUBDOMAIN: " + sub_domain + "----RECORDLINE: "+record["line"] )
                                     else:
                                         print("DELETE DNS ERROR: ----Time: "  + str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())) + "----DOMAIN: " + domain + "----SUBDOMAIN: " + sub_domain + "----RECORDLINE: "+record["line"] + "----MESSAGE: " + retMsg["message"] )
+                                        isSuccess = false
                     ret = cloud.get_record(domain, 100, sub_domain, "A")
                     if DNS_SERVER != 1 or ret["code"] == 0 :
                         if DNS_SERVER == 1 and "Free" in ret["data"]["domain"]["grade"] and AFFECT_NUM > 2:
@@ -155,6 +170,18 @@ def main(cloud):
                                 changeDNS("CT", ct_info, temp_cf_ctips, domain, sub_domain, cloud)
         except Exception as e:
             print("CHANGE DNS ERROR: ----Time: " + str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())) + "----MESSAGE: " + str(e))
+            isSuccess = false
+def send():
+    qData = ""
+    if isSuccess:
+        for i in ip:
+            qData += " & " + i
+     elif:
+        qData = "自动换加速IP出错啦@5，快去检查"
+    qData = "{\"msg\": \"" + qData + "\"}"
+    qData = json.loads(qData)
+    requests.post('https://qmsg.zendee.cn/send/' + QKEY, data = qData)
+    
 
 if __name__ == '__main__':
     if DNS_SERVER == 1:
@@ -162,3 +189,4 @@ if __name__ == '__main__':
     elif DNS_SERVER == 2:
         cloud = AliApi(SECRETID, SECRETKEY)
     main(cloud)
+    send()
