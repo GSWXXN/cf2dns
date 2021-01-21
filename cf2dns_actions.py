@@ -23,7 +23,7 @@ DOMAINS = json.loads(os.environ["DOMAINS"])  #{"hostmonit.com": {"@": ["CM","CU"
 #腾讯云后台获取 https://console.cloud.tencent.com/cam/capi
 SECRETID = os.environ["SECRETID"]    #'AKIDV**********Hfo8CzfjgN'
 SECRETKEY = os.environ["SECRETKEY"]   #'ZrVs*************gqjOp1zVl'
-QKEY = os.environ["QKEY"]
+QKEY = os.environ["QMSG"]
 #默认为普通版本 不用修改
 AFFECT_NUM = 2
 #DNS服务商 如果使用DNSPod改为1 如果使用阿里云解析改成2
@@ -180,7 +180,7 @@ def send():
         qData = "自动换加速IP出错啦@5，快去检查"
     qData = "{\"msg\": \"" + qData + "\"}"
     qData = json.loads(qData)
-    requests.post('https://qmsg.zendee.cn/send/' + QKEY, data = qData)
+    requests.post('https://qmsg.zendee.cn/send/' + QMSG, data = qData)
     
 
 if __name__ == '__main__':
