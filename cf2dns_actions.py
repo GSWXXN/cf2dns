@@ -176,7 +176,7 @@ def send():
     if isSuccess:
         for i in ip:
             qData += " & " + i
-     elif:
+    else:
         qData = "自动换加速IP出错啦@5，快去检查"
     qData = "{\"msg\": \"" + qData + "\"}"
     qData = json.loads(qData)
